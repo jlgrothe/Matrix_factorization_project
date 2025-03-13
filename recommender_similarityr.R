@@ -15,9 +15,6 @@ get_cos_sim<-function(i1,i2,data_matrix){
   
   #A function which takes in two indices, 
   #and returns the cosine similarity of the items with those indices
-  #TO DO: either make it clear that this is for items,
-  #or extend this function so that if it is for users it shifts the position
-  #and add data_matrix parameter
   
   item1<-which(!is.na(data_matrix[,i1]))
   item2<-which(!is.na(data_matrix[,i2]))
@@ -65,6 +62,8 @@ get_jaccard<-function(i1,i2,data_matrix){
   return (length(overlap)/length(union))
   
 }
+
+#TO DO: CREATE FUNCTIONS FOR AMI AND URP
 
 get_rated_items<-function(user,data_matrix){
   
@@ -136,11 +135,31 @@ get_rec_sim<-function(user,Rhat,data_matrix,n,similarity){
   return(df)
 }
 
-#examples of what the cor, cosine, and jaccard similarity to recommendations matrices look like
-
-u124_cordf<-get_rec_sim(124,r,data_matrix,10,"cor")
-u124_simdf<-get_rec_sim(124,r,data_matrix,10,"cosine")
-u124_jacdf<-get_rec_sim(124,r,data_matrix,10,"jaccard")
+rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
+  
+  #A function which takes in a predicted ratings matrix,
+  #an original data_matrix, a number of top recommendations,
+  #a similarity metric and a statistic
+  #and returns a data frame with n rows and columns equal to the number of users
+  #in the original data_matrix
+  #which holds a statistic about the similarity between a top recommendation for a user
+  #and all the items that user has rated
+  #note: this is kind of computationally intensive, ~3 min for cosine and mean
+  #note: more efficient to do this without if statements? 
+  #note: need to add more options for similarity and stat
+  
+  num_users<-length(data_matrix[,1])
+  stat_df<-as.data.frame(matrix(0, nrow = 10, ncol = num_users))
+  if(similarity=="cosine" && stat=="mean"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"cosine")
+      for (n in 1:10){
+        stat_df[n,i]<-mean(sim_df[,n])
+      }
+    }
+  }
+  return(stat_df)
+}
 
 num_users<-length(data_matrix[,1])
 mean_cosine_df<-as.data.frame(matrix(0, nrow = 10, ncol = num_users))
@@ -152,6 +171,18 @@ for (i in 1:num_users){
   print(i)
 }
 
-#note: took about 3 minutes to run that loop 
+#examples of what the cor, cosine, and jaccard similarity to recommendations matrices look like
+
+u124_cordf<-get_rec_sim(124,r,data_matrix,10,"cor")
+u124_simdf<-get_rec_sim(124,r,data_matrix,10,"cosine")
+u124_jacdf<-get_rec_sim(124,r,data_matrix,10,"jaccard")
+
+#getting the matrix of the mean cosine similarity between 
+#each of the top 10 items recommended for a user
+#and all the items that user has rated
+#for all the users in the dataset
+
+mean_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","mean")
+
 
   
