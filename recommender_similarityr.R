@@ -272,4 +272,10 @@ mean_AMI_df<-rec_sim_stats(r,data_matrix,10,"AMI","mean")
 #also: NaNs propogate really easily (so try to avoid that)
 
 var_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","var")
+
+
+#todo: analyze these data frames
+#maybe: look at the number of ratings for each user, see if that leads to differences
+#possible visualization: 
+#histogram with number of ratings on x-axis, mean difference of recommended items on y-axis
   
