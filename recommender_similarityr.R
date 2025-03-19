@@ -1,7 +1,7 @@
 library(recommenderlab)
+library(aricode)
 data("MovieLense")
 data_matrix=as(MovieLense,"matrix")
-data_matrix<-data_matrix-rowMeans(data_matrix,na.rm=T)
 
 #doing the funk svd on data_matrix (takes a little bit of time)
 
@@ -63,7 +63,24 @@ get_jaccard<-function(i1,i2,data_matrix){
   
 }
 
-#TO DO: CREATE FUNCTIONS FOR AMI AND URP
+get_AMI<-function(i1,i2,data_matrix){
+  
+  #A function which takes in two indices and a data matrix
+  #NOTE: takes in the original, non centered data matrix
+  #and uses the AMI function in the aricode package 
+  #to return the AMI of the items at those indices
+  
+  item1<-which(!is.na(data_matrix[,i1]))
+  item2<-which(!is.na(data_matrix[,i2]))
+  overlap<-intersect(item1,item2)
+  if(length(overlap) <= 1){
+    return(0)
+  }
+  i1_overlapr<-data_matrix[overlap,i1]
+  i2_overlapr<-data_matrix[overlap,i2]
+  AMI<-AMI(i1_overlapr,i2_overlapr)
+  return (AMI)
+}
 
 get_rated_items<-function(user,data_matrix){
   
@@ -101,6 +118,7 @@ get_rec_sim<-function(user,Rhat,data_matrix,n,similarity){
   
   #A function which takes in a user, 
   #an estimated ratings matrix, 
+  #an original ratings matrix (not mean subtracted)
   #a number of recommendations to produce,
   #and a similarity metric, NOTE: NOT ALL SIMILARITY METRICS ARE ON THE SAME SCALE
   #and produces the recommendations for that user
@@ -111,6 +129,17 @@ get_rec_sim<-function(user,Rhat,data_matrix,n,similarity){
   rated<-get_rated_items(user,data_matrix)
   nrated<-length(rated)
   df <- as.data.frame(matrix(0, nrow = nrated, ncol = n))
+  
+  if(similarity == "AMI"){
+    for(x in 1:nrated){
+      for (i in 1:n){
+        df[x,i]=get_AMI(rated[x],recs[i],data_matrix)
+      }
+    }
+  }
+  
+  #other similarity measures work best if the data is mean subtracted
+  data_matrix<-data_matrix-rowMeans(data_matrix,na.rm=T)
   if(similarity == "cosine"){
     for (x in 1:nrated){
       for (i in 1:n){
@@ -138,7 +167,7 @@ get_rec_sim<-function(user,Rhat,data_matrix,n,similarity){
 rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
   
   #A function which takes in a predicted ratings matrix,
-  #an original data_matrix, a number of top recommendations,
+  #an original data_matrix (not mean subtracted), a number of top recommendations,
   #a similarity metric and a statistic
   #and returns a data frame with n rows and columns equal to the number of users
   #in the original data_matrix
@@ -150,11 +179,62 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
   
   num_users<-length(data_matrix[,1])
   stat_df<-as.data.frame(matrix(0, nrow = 10, ncol = num_users))
+  #first do if AMI, then transform data matrix if necessary
+  if(similarity=="AMI" && stat=="mean"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"AMI")
+      for (n in 1:10){
+        stat_df[n,i]<-mean(sim_df[,n])
+      }
+    }
+  }
+  
+  data_matrix<-data_matrix-rowMeans(data_matrix,na.rm=T)
   if(similarity=="cosine" && stat=="mean"){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"cosine")
       for (n in 1:10){
         stat_df[n,i]<-mean(sim_df[,n])
+      }
+    }
+  }
+  if(similarity=="cosine" && stat=="var"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"cosine")
+      for (n in 1:10){
+        stat_df[n,i]<-var(sim_df[,n])
+      }
+    }
+  }
+  if(similarity=="cor" && stat=="mean"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"cor")
+      for (n in 1:10){
+        stat_df[n,i]<-mean(sim_df[,n])
+      }
+    }
+  }
+  if(similarity=="cor" && stat=="var"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"cor")
+      for (n in 1:10){
+        stat_df[n,i]<-var(sim_df[,n])
+      }
+    }
+  }
+  if(similarity=="jaccard" && stat=="mean"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"jaccard")
+      for (n in 1:10){
+        stat_df[n,i]<-mean(sim_df[,n])
+      }
+    }
+  }
+  if(similarity=="jaccard" && stat=="var"){
+    for (i in 1:num_users){
+      sim_df<-get_rec_sim(i,r,data_matrix,10,"jaccard")
+      for (n in 1:10){
+        stat_df[n,i]<-var(sim_df[,n])
       }
     }
   }
@@ -173,9 +253,10 @@ for (i in 1:num_users){
 
 #examples of what the cor, cosine, and jaccard similarity to recommendations matrices look like
 
-u124_cordf<-get_rec_sim(124,r,data_matrix,10,"cor")
+u124_corsdf<-get_rec_sim(124,r,data_matrix,10,"cor")
 u124_simdf<-get_rec_sim(124,r,data_matrix,10,"cosine")
 u124_jacdf<-get_rec_sim(124,r,data_matrix,10,"jaccard")
+u124_amidf<-get_rec_sim(124,r,data_matrix,10,"AMI")
 
 #getting the matrix of the mean cosine similarity between 
 #each of the top 10 items recommended for a user
@@ -183,6 +264,12 @@ u124_jacdf<-get_rec_sim(124,r,data_matrix,10,"jaccard")
 #for all the users in the dataset
 
 mean_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","mean")
+mean_AMI_df<-rec_sim_stats(r,data_matrix,10,"AMI","mean")
+#potential problem with AMI: also needs overlap in categories of ratings
+#ie: you need item i and v to have overlap in the values of ratings 
+#(both have 5s,4s,3s,2s,1s,etc.) 
+#it could be the move to just classify as above average versus average, or below, average, and above
+#also: NaNs propogate really easily (so try to avoid that)
 
-
+var_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","var")
   
