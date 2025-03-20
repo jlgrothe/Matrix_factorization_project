@@ -78,6 +78,7 @@ get_AMI<-function(i1,i2,data_matrix){
   #NOTE: takes in the original, non centered data matrix
   #and uses the AMI function in the aricode package 
   #to return the AMI of the items at those indices
+  #NOTE: AMI calculation must be off because it returns negative values
   
   item1<-which(!is.na(data_matrix[,i1]))
   item2<-which(!is.na(data_matrix[,i2]))
@@ -276,10 +277,14 @@ u124_simdf<-get_rec_sim(124,r,data_matrix,10,"cosine")
 u124_jacdf<-get_rec_sim(124,r,data_matrix,10,"jaccard")
 u124_amidf<-get_rec_sim(124,r,data_matrix,10,"AMI")
 
+u124_amidf_rescale<-get_rec_sim(124,r,data_matrix_meansub,10,"AMI")
+
 #example calls to rec_sim_stats to retrieve the dataframes
 #we want for analysis and visualization
 
 mean_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","mean")
+mean_cor_df<-rec_sim_stats(r,data_matrix,10,"cor","mean")
+mean_jac_df<-rec_sim_stats(r,data_matrix,10,"jaccard","mean")
 var_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","var")
 mean_AMI_df<-rec_sim_stats(r,data_matrix,10,"AMI","mean")
 
@@ -292,7 +297,22 @@ mean_AMI_df<-rec_sim_stats(r,data_matrix,10,"AMI","mean")
 
 
 
+#we need to rescale the data matrix before it goes into the get_ami function
 
 
+nusers<-nrow(data_matrix_meansub)
+nitems<-ncol(data_matrix_meansub)
+for (u in 1:nusers){
+  for (i in 1:nitems){
+    if(is.na(data_matrix_meansub[u,i]) == FALSE){
+      if (data_matrix_meansub[u,i]>= 0){
+        data_matrix_meansub[u,i]=1
+      } else {
+        data_matrix_meansub[u,i]=-1
+      }
+    }
+  }
+}
 
+#make this a function with different arguments to rescale on different criteria
 
