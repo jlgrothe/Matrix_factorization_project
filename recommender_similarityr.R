@@ -1,5 +1,6 @@
 library(recommenderlab)
 library(aricode)
+
 data("MovieLense")
 data_matrix=as(MovieLense,"matrix")
 
@@ -164,12 +165,27 @@ get_rec_sim<-function(user,Rhat,data_matrix,n,similarity){
   return(df)
 }
 
+get_size_list<-function(data_matrix){
+  
+  #A function which takes the original (sparse) data matrix
+  #and returns a list with number of entries equal to the number of users
+  #and each entry is how many items the corresponding user has rated 
+  
+  num_users<-length(data_matrix[,1])
+  size<-numeric(num_users)
+  for (u in 1:num_users){
+    num_rated<-length(which(!is.na(data_matrix[u,])))
+    size[u]<-num_rated
+  }
+  return(size)
+}
+
 rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
   
   #A function which takes in a predicted ratings matrix,
   #an original data_matrix (not mean subtracted), a number of top recommendations,
   #a similarity metric and a statistic
-  #and returns a data frame with n rows and columns equal to the number of users
+  #and returns a data frame with n columns and rows equal to the number of users
   #in the original data_matrix
   #which holds a statistic about the similarity between a top recommendation for a user
   #and all the items that user has rated
@@ -178,13 +194,13 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
   #note: need to add more options for similarity and stat
   
   num_users<-length(data_matrix[,1])
-  stat_df<-as.data.frame(matrix(0, nrow = 10, ncol = num_users))
+  stat_df<-as.data.frame(matrix(0, nrow = num_users, ncol = n))
   #first do if AMI, then transform data matrix if necessary
   if(similarity=="AMI" && stat=="mean"){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"AMI")
       for (n in 1:10){
-        stat_df[n,i]<-mean(sim_df[,n])
+        stat_df[i,n]<-mean(sim_df[,n])
       }
     }
   }
@@ -194,7 +210,7 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"cosine")
       for (n in 1:10){
-        stat_df[n,i]<-mean(sim_df[,n])
+        stat_df[i,n]<-mean(sim_df[,n])
       }
     }
   }
@@ -202,7 +218,7 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"cosine")
       for (n in 1:10){
-        stat_df[n,i]<-var(sim_df[,n])
+        stat_df[i,n]<-var(sim_df[,n])
       }
     }
   }
@@ -210,7 +226,7 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"cor")
       for (n in 1:10){
-        stat_df[n,i]<-mean(sim_df[,n])
+        stat_df[i,n]<-mean(sim_df[,n])
       }
     }
   }
@@ -218,7 +234,7 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"cor")
       for (n in 1:10){
-        stat_df[n,i]<-var(sim_df[,n])
+        stat_df[i,n]<-var(sim_df[,n])
       }
     }
   }
@@ -226,7 +242,7 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"jaccard")
       for (n in 1:10){
-        stat_df[n,i]<-mean(sim_df[,n])
+        stat_df[i,n]<-mean(sim_df[,n])
       }
     }
   }
@@ -234,22 +250,15 @@ rec_sim_stats<-function(Rhat, data_matrix, n, similarity, stat){
     for (i in 1:num_users){
       sim_df<-get_rec_sim(i,r,data_matrix,10,"jaccard")
       for (n in 1:10){
-        stat_df[n,i]<-var(sim_df[,n])
+        stat_df[i,n]<-var(sim_df[,n])
       }
     }
   }
+  stat_df[,n+1]<-get_size_list(data_matrix)
   return(stat_df)
 }
 
-num_users<-length(data_matrix[,1])
-mean_cosine_df<-as.data.frame(matrix(0, nrow = 10, ncol = num_users))
-for (i in 1:num_users){
-  sim_df<-get_rec_sim(i,r,data_matrix,10,"cosine")
-  for (n in 1:10){
-    mean_cosine_df[n,i]<-mean(sim_df[,n])
-  }
-  print(i)
-}
+
 
 #examples of what the cor, cosine, and jaccard similarity to recommendations matrices look like
 
@@ -277,5 +286,12 @@ var_cos_df<-rec_sim_stats(r,data_matrix,10,"cosine","var")
 #todo: analyze these data frames
 #maybe: look at the number of ratings for each user, see if that leads to differences
 #possible visualization: 
-#histogram with number of ratings on x-axis, mean difference of recommended items on y-axis
+#bar plot with number of ratings on x-axis, mean difference of recommended items on y-axis
   
+
+#want: list containing the size of the set of items each user has rated
+mean_cos_df[,ncol(mean_cos_df)+1]<-get_size_list(data_matrix)
+
+#plot with number of ratings on x axis, cosine similarity on y axis
+
+
