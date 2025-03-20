@@ -5,6 +5,7 @@
 #column n+1 is the number of items that user has rated
 
 library(ggplot2)
+library(ggpubr)
 
 #creating a plot of the similarity of the top user on the y axis 
 #and number of items rated for that user on the x axis
@@ -38,13 +39,23 @@ get_least_similar<-function(stat_df){
   return (min_sim)
 }
 
-most_similar<-get_most_similar(mean_cos_df)
-least_similar<-get_least_similar(mean_cos_df)
-diff<-most_similar-least_similar
-diff_df<-data.frame(mean_cos_df[,11],most_similar,least_similar,diff)
-colnames(diff_df)<-c("Num_rated","Most_similar","Least_similar","Difference")
+get_diff_vis<-function(stat_df){
+  num_ratings_index<-ncol(stat_df)
+  most_similar<-get_most_similar(stat_df)
+  least_similar<-get_least_similar(stat_df)
+  diff<-most_similar-least_similar
+  diff_df<-data.frame(stat_df[,num_ratings_index],most_similar,least_similar,diff)
+  colnames(diff_df)<-c("Num_rated","Most_similar","Least_similar","Difference")
+  
+  diff_plot<-ggplot(diff_df,aes(x=Num_rated,y=Difference))+geom_point()+ylim(0,0.75)
+  most_plot<-ggplot(diff_df,aes(x=Num_rated,y=Most_similar))+geom_point()+ylim(0,0.75)
+  least_plot<-ggplot(diff_df,aes(x=Num_rated,y=Least_similar))+geom_point()+ylim(0,0.5)
+  ggarrange(most_plot,least_plot,diff_plot,
+    labels=c("Most similar on average","Least similar on average","Difference between most and least similar"),
+    ncol=2,nrow=2)
+}
+#to do: rescale so that each plot is the same scale
 
-ggplot(diff_df,aes(x=Num_rated,y=Difference))+geom_point()
-ggplot(diff_df,aes(x=Num_rated,y=Most_similar))+geom_point()
-ggplot(diff_df,aes(x=Num_rated,y=Least_similar))+geom_point()
-
+get_diff_vis(mean_cos_df)
+get_diff_vis(mean_cor_df)
+get_diff_vis(mean_jac_df)
