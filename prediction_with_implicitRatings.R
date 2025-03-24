@@ -58,3 +58,8 @@ r_implicit<-matrix(predictions,nrow=num_users,ncol=num_item)
 
 #writing it to a csv so we don't have to go through these steps again
 write.csv(r_implicit,file="MovieLense_PredictedRatings_Implicit")
+
+
+#next steps: look at some of the similarity measures on this data
+#get other data into right formata and fit both recommender systems on it
+#look at those similarity measures
